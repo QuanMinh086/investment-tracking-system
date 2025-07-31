@@ -1,0 +1,66 @@
+# Node.js
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/package-lock.json
+**/yarn.lock
+**/dist/
+**/build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# dotenv
+**/.env
+**/.env.*
+
+# VSCode settings
+.vscode/
+
+# Docker
+**/docker-compose.override.yml
+**/.env.docker
+**/Dockerfile
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/crash.log
+
+# Frontend (e.g., React/Vite)
+frontend/build/
+frontend/.vite/
+frontend/.cache/
+
+# Coverage
+coverage/
+**/coverage/
+
+# Misc
+*.tgz
+*.gz
+*.zip
+
+# IDEs
+.idea/
+*.swp
+*.swo
+
+# Postgres volumes
+/postgres_data/
