@@ -25,10 +25,6 @@ jobs:
           chmod 400 ~/vm.pem
 
           ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
-          export DB_USER='${{ secrets.DB_USER }}'
-          export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
-          export DB_NAME='${{ secrets.DB_NAME }}'
-          export JWT_SECRET='${{ secrets.JWT_SECRET }}'
 
           sudo apt update && sudo apt upgrade -y
 
@@ -36,6 +32,9 @@ jobs:
           git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
           if [ ! -f ~/.database_setup_done ]; then
+            export DB_USER='${{ secrets.DB_USER }}'
+            export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
+            export DB_NAME='${{ secrets.DB_NAME }}'
             bash ~/investment-tracking-system/.github/workflows/database_setup.sh
             touch ~/.database_setup_done
           fi
@@ -44,11 +43,11 @@ jobs:
           cat <<EOT > .env
           PORT=8000
           DB_HOST=localhost
-          DB_USER=${DB_USER}
-          DB_PASSWORD=${DB_PASSWORD}
-          DB_NAME=${DB_NAME}
+          DB_USER="${{ secrets.DB_USER }}"
+          DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          DB_NAME="${{ secrets.DB_NAME }}"
           DB_PORT=5432
-          JWT_SECRET=${JWT_SECRET}
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
           EOT
 
           sudo mv ~/investment-tracking-system/backend ~/
