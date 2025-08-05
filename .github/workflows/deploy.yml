@@ -118,7 +118,7 @@ jobs:
                   proxy_cache_bypass \$http_upgrade;
               }
             }
-            NGINX
+          NGINX
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo ln -s /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
           fi
