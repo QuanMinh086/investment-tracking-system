@@ -26,7 +26,6 @@ jobs:
           chmod 400 ~/vm.pem
 
           ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
-          set -e
 
           DB_USER="${{ secrets.DB_USER }}"
           DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
@@ -44,6 +43,7 @@ jobs:
           if [ -d /home/ubuntu/backend ]; then
             echo "Removing old backend directory…"
             rm -rf /home/ubuntu/backend
+            rm -f /home/ubuntu/.backend_setup_done
           fi
 
           # move the fresh backend into place
