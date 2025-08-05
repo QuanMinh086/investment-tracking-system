@@ -14,14 +14,12 @@ jobs:
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
 
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} <<-FRONTEND
-            # copy key for second hop
-            if [ ! -f ~/vm.pem ]; then
-              cat ~/vm.pem > ~/vm.pem
-              chmod 400 ~/vm.pem
-            fi
+          scp -o StrictHostKeyChecking=no -i vm.pem vm.pem ubuntu@${{ secrets.EC2_FRONTEND }}:~/vm.pem
 
-            ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} <<-BACKEND
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} <<-FRONTEND
+          chmod 400 vm.pem
+
+          ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} <<-BACKEND
           set -e
 
           # bring secrets into this shell
