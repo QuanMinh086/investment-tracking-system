@@ -39,7 +39,7 @@ jobs:
           fi
 
           cd ~/investment-tracking-system/backend
-          cat <<EOT > /home/ubuntu/frontend/.env
+          cat <<EOT > /home/ubuntu/backend/.env
           PORT=8000
           DB_HOST=localhost
           DB_USER=${DB_USER}
