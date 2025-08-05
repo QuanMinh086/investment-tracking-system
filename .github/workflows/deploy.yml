@@ -14,56 +14,53 @@ jobs:
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
 
-          scp -o StrictHostKeyChecking=no -i vm.pem vm.pem ubuntu@${{ secrets.EC2_FRONTEND }}:~/vm.pem
+          # ─── SSH to FRONTEND ───
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "FRONTEND"
+          if [ ! -f ~/vm.pem ]; then
+            cat ~/vm.pem > ~/vm.pem
+            chmod 400 ~/vm.pem
+          fi
 
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} <<-FRONTEND
-          chmod 400 vm.pem
-
-          ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} <<-BACKEND
+          ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
           set -e
 
-          # bring secrets into this shell
           DB_USER="${{ secrets.DB_USER }}"
           DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
           DB_NAME="${{ secrets.DB_NAME }}"
-          JWT_SECRET="${{ secrets.JWT_SECRET }}"
 
-          # update & clear out old clone
           sudo apt update && sudo apt upgrade -y
-          rm -rf ~/investment-tracking-system
+
           git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
-          # initial database setup (only once)
           if [ ! -f ~/.database_setup_done ]; then
             bash ~/investment-tracking-system/.github/workflows/database_setup.sh
             touch ~/.database_setup_done
           fi
 
-          # move fresh backend into place
-          if [ -d ~/backend ]; then
-            rm -rf ~/backend
+          if [ -d /home/ubuntu/backend ]; then
+            echo "Removing old backend directory…"
+            rm -rf /home/ubuntu/backend
           fi
-          mv ~/investment-tracking-system/backend ~/backend
-          cd ~/backend
+
+          # move the fresh backend into place
+          mv /home/ubuntu/investment-tracking-system/backend /home/ubuntu/backend
+          cd /home/ubuntu/backend
 
           npm install
 
-          # one-time backend bootstrap
           if [ ! -f ~/.backend_setup_done ]; then
             bash ~/investment-tracking-system/.github/workflows/backend_setup.sh
             touch ~/.backend_setup_done
           fi
 
-          # clean up the repo folder
           rm -rf ~/investment-tracking-system
 
-          # idempotent PM2 start/restart
+          # If “app” is already registered, restart it; otherwise start it (with force)
           pm2 describe app >/dev/null 2>&1 \
             && pm2 restart app \
             || pm2 start app.js --name app -f
           BACKEND
           FRONTEND
-
       
       # - name: Deploy frontend
       #   run: |
