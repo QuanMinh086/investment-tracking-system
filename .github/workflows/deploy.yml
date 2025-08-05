@@ -52,7 +52,7 @@ jobs:
 
           # remove the repo after moving
           rm -rf ~/investment-tracking-system
-          pm2 start app.js --name app
+          pm2 start app.js --name app -f
           BACKEND
           FRONTEND
       
