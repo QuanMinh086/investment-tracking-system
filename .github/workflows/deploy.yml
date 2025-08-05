@@ -14,7 +14,13 @@ jobs:
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
 
-          scp -o StrictHostKeyChecking=no -i vm.pem vm.pem ubuntu@${{ secrets.EC2_FRONTEND }}:~/vm.pem
+          # only upload vm.pem if it doesn't already exist on frontend
+          if ! ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} \
+              "[ -f /home/ubuntu/vm.pem ]"; then
+            scp -o StrictHostKeyChecking=no -i vm.pem \
+                vm.pem \
+                ubuntu@${{ secrets.EC2_FRONTEND }}:/home/ubuntu/vm.pem
+          fi
 
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "FRONTEND"
           chmod 400 ~/vm.pem
