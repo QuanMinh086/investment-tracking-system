@@ -21,7 +21,7 @@ jobs:
                 vm.pem \
                 ubuntu@${{ secrets.EC2_FRONTEND }}:/home/ubuntu/vm.pem
           fi
-
+          
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "FRONTEND"
           chmod 400 ~/vm.pem
 
