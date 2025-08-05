@@ -16,10 +16,13 @@ jobs:
           chmod 400 vm.pem
 
           # One SSH, two hops
-          ssh -i vm.pem \
-              -o StrictHostKeyChecking=no \
-              -J ubuntu@${{ secrets.EC2_FRONTEND }} \
-              ubuntu@${{ secrets.EC2_BACKEND }} <<-'EOF'
+          ssh \
+            -i vm.pem \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -J ubuntu@${{ secrets.EC2_FRONTEND }} \
+            ubuntu@${{ secrets.EC2_BACKEND }} <<-'EOF'
+            set -e
             set -e
 
             git clone https://github.com/QuanMinh086/investment-tracking-system.git
