@@ -11,60 +11,49 @@ jobs:
     steps:
       - name: Deploy backend
         run: |
+          # write key locally
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
 
-          # only upload vm.pem if it doesn't already exist on frontend
-          if ! ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} \
-              "[ -f /home/ubuntu/vm.pem ]"; then
-            scp -o StrictHostKeyChecking=no -i vm.pem \
-                vm.pem \
-                ubuntu@${{ secrets.EC2_FRONTEND }}:/home/ubuntu/vm.pem
-          fi
-          
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "FRONTEND"
-          chmod 400 ~/vm.pem
+          # One SSH, two hops
+          ssh -i vm.pem \
+              -o StrictHostKeyChecking=no \
+              -J ubuntu@${{ secrets.EC2_FRONTEND }} \
+              ubuntu@${{ secrets.EC2_BACKEND }} <<-'EOF'
+            set -e
 
-          ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
+            git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
-          DB_USER="${{ secrets.DB_USER }}"
-          DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          DB_NAME="${{ secrets.DB_NAME }}"
+            # write .env with the GH‐expanded variables
+            cat > ~/investment-tracking-system/backend/.env <<EOE
+            PORT=8000
+            DB_HOST=localhost
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_PORT=5432
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            EOE
 
-          sudo apt update && sudo apt upgrade -y
+            cd ~/investment-tracking-system/backend
+            npm install
 
-          git clone https://github.com/QuanMinh086/investment-tracking-system.git
+            # one-time DB & backend bootstrap
+            if [ ! -f ~/.database_setup_done ]; then
+              bash ~/.database_setup_done=false && \
+              bash ~/backend/.github/workflows/database_setup.sh && \
+              touch ~/.database_setup_done
+            fi
+            if [ ! -f ~/.backend_setup_done ]; then
+              bash ~/backend/.github/workflows/backend_setup.sh && \
+              touch ~/.backend_setup_done
+            fi
 
-          if [ ! -f ~/.database_setup_done ]; then
-            bash ~/investment-tracking-system/.github/workflows/database_setup.sh
-            touch ~/.database_setup_done
-          fi
-
-          if [ -d /home/ubuntu/backend ]; then
-            echo "Removing old backend directory…"
-            rm -rf /home/ubuntu/backend
-            rm -f /home/ubuntu/.backend_setup_done
-          fi
-
-          # move the fresh backend into place
-          mv /home/ubuntu/investment-tracking-system/backend /home/ubuntu/backend
-          cd /home/ubuntu/backend
-
-          npm install
-
-          if [ ! -f ~/.backend_setup_done ]; then
-            bash ~/investment-tracking-system/.github/workflows/backend_setup.sh
-            touch ~/.backend_setup_done
-          fi
-
-          rm -rf ~/investment-tracking-system
-
-          # If “app” is already registered, restart it; otherwise start it (with force)
-          pm2 describe app >/dev/null 2>&1 \
-            && pm2 restart app \
-            || pm2 start app.js --name app -f
-          BACKEND
-          FRONTEND
+            # idempotent PM2
+            pm2 describe app >/dev/null 2>&1 \
+              && pm2 restart app --update-env \
+              || pm2 start backend/app.js --name app -f
+          EOF
       
       # - name: Deploy frontend
       #   run: |
