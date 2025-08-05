@@ -83,14 +83,10 @@ jobs:
           cd investment-tracking-system/frontend
           if [ ! -f /home/ubuntu/.env_setup_done ]; then
             cat <<EOT > .env
-            REACT_APP_API_URL=/api
-          EOT
+              REACT_APP_API_URL=/api
+            EOT
             touch /home/ubuntu/.env_setup_done
           fi
-          
-          npm install
-          npm run build
-          sudo mv build /var/www/app
 
           if [ ! -f /home/ubuntu/.nginx_setup_done ]; then
             bash /home/ubuntu/investment-tracking-system/.github/workflows/nginx.sh
@@ -99,6 +95,10 @@ jobs:
 
           sudo mv investment-tracking-system/frontend /home/ubuntu
           sudo rm -rf investment-tracking-system
+
+          npm install
+          npm run build
+          sudo mv build /var/www/app
 
           sudo nginx -t
           sudo systemctl restart nginx
