@@ -84,7 +84,7 @@ jobs:
           if [ ! -f /home/ubuntu/.env_setup_done ]; then
             cat <<EOT > .env
             REACT_APP_API_URL=/api
-            EOT
+          EOT
             touch /home/ubuntu/.env_setup_done
           fi
           
