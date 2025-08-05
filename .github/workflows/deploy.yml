@@ -13,14 +13,14 @@ jobs:
         run: |
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "EOF"
 
           if [ ! -f ~/vm.pem ]; then
             echo "${{ secrets.PRIVATE_KEY }}" > ~/vm.pem
             chmod 400 ~/vm.pem
           fi
 
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "EOF"
             sudo apt update && sudo apt upgrade -y
 
             git clone https://github.com/QuanMinh086/investment-tracking-system.git
@@ -53,7 +53,7 @@ jobs:
       
       - name: Deploy frontend
         run : |
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "EOF"
           sudo apt update && sudo apt upgrade -y
 
           git clone https://github.com/QuanMinh086/investment-tracking-system.git
