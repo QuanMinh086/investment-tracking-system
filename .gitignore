@@ -32,7 +32,6 @@ pids/
 # Docker
 **/docker-compose.override.yml
 **/.env.docker
-**/Dockerfile
 
 # OS
 .DS_Store
@@ -42,6 +41,10 @@ Thumbs.db
 terraform/.terraform/
 terraform/.terraform.lock.hcl
 terraform/crash.log
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+*.tfvars
+*.tfvars.json
 
 # Frontend (e.g., React/Vite)
 frontend/build/

@@ -1,7 +1,3 @@
-provider "aws" {
-  region = "us-east-1"
-}
-
 # VPC
 resource "aws_vpc" "vpc" {
   cidr_block           = "10.0.0.0/16"
@@ -10,6 +6,15 @@ resource "aws_vpc" "vpc" {
 
   tags = {
     Name = "chat"
+  }
+}
+
+# Internet Gateway
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.vpc.id
+
+  tags = {
+    Name = "main-igw"
   }
 }
 
@@ -32,6 +37,25 @@ resource "aws_subnet" "private" {
 
   tags = {
     Name = "private-subnet"
+  }
+}
+
+# Elastic IP for NAT
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+
+  tags = {
+    Name = "nat-eip"
+  }
+}
+
+# NAT Gateway
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public.id
+
+  tags = {
+    Name = "nat-gateway"
   }
 }
 
@@ -108,9 +132,6 @@ resource "aws_instance" "frontend" {
   key_name                    = "vm"
   associate_public_ip_address = true
 
-  user_data = <<-EOF
-              EOF
-
   tags = {
     Name = "frontend"
   }
@@ -125,39 +146,8 @@ resource "aws_instance" "backend" {
   key_name                    = "vm"
   associate_public_ip_address = false
 
-  user_data = <<-EOF
-              EOF
-
   tags = {
     Name = "backend"
-  }
-}
-
-# Internet Gateway
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.vpc.id
-
-  tags = {
-    Name = "main-igw"
-  }
-}
-
-# Elastic IP for NAT
-resource "aws_eip" "nat_eip" {
-  domain = "vpc"
-
-  tags = {
-    Name = "nat-eip"
-  }
-}
-
-# NAT Gateway
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.public.id
-
-  tags = {
-    Name = "nat-gateway"
   }
 }
 
