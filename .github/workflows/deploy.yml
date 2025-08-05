@@ -10,88 +10,98 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy backend
-        run: |
-          echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
-          chmod 400 vm.pem
+  run: |
+    echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
+    chmod 400 vm.pem
 
-          # ─── SSH to FRONTEND ───
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << 'FRONTEND'
-          if [ ! -f ~/vm.pem ]; then
-            cat ~/vm.pem > ~/vm.pem
-            chmod 400 ~/vm.pem
-          fi
+    ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} <<-FRONTEND
+      # copy key for second hop
+      if [ ! -f ~/vm.pem ]; then
+        cat ~/vm.pem > ~/vm.pem
+        chmod 400 ~/vm.pem
+      fi
 
-          ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << 'BACKEND'
-          set -e
+      ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} <<-BACKEND
+    set -e
 
-          sudo apt update && sudo apt upgrade -y
+    # bring secrets into this shell
+    DB_USER="${{ secrets.DB_USER }}"
+    DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+    DB_NAME="${{ secrets.DB_NAME }}"
+    JWT_SECRET="${{ secrets.JWT_SECRET }}"
 
-          rm -rf ~/investment-tracking-system
+    # update & clear out old clone
+    sudo apt update && sudo apt upgrade -y
+    rm -rf ~/investment-tracking-system
+    git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
-          git clone https://github.com/QuanMinh086/investment-tracking-system.git
+    # initial database setup (only once)
+    if [ ! -f ~/.database_setup_done ]; then
+      bash ~/investment-tracking-system/.github/workflows/database_setup.sh
+      touch ~/.database_setup_done
+    fi
 
-          if [ ! -f ~/.database_setup_done ]; then
-            bash ~/investment-tracking-system/.github/workflows/database_setup.sh
-            touch ~/.database_setup_done
-          fi
+    # move fresh backend into place
+    if [ -d ~/backend ]; then
+      rm -rf ~/backend
+    fi
+    mv ~/investment-tracking-system/backend ~/backend
+    cd ~/backend
 
-          if [ -d /home/ubuntu/backend ]; then
-            echo "Removing old backend directory…"
-            rm -rf /home/ubuntu/backend
-          fi
+    npm install
 
-          # move the fresh backend into place
-          mv /home/ubuntu/investment-tracking-system/backend /home/ubuntu/backend
-          cd /home/ubuntu/backend
+    # one-time backend bootstrap
+    if [ ! -f ~/.backend_setup_done ]; then
+      bash ~/investment-tracking-system/.github/workflows/backend_setup.sh
+      touch ~/.backend_setup_done
+    fi
 
-          npm install
+    # clean up the repo folder
+    rm -rf ~/investment-tracking-system
 
-          if [ ! -f ~/.backend_setup_done ]; then
-            bash ~/investment-tracking-system/.github/workflows/backend_setup.sh
-            touch ~/.backend_setup_done
-          fi
+    # idempotent PM2 start/restart
+    pm2 describe app >/dev/null 2>&1 \
+      && pm2 restart app \
+      || pm2 start app.js --name app -f
+    BACKEND
+    FRONTEND
 
-          # remove the repo after moving
-          rm -rf ~/investment-tracking-system
-          pm2 start app.js --name app -f
-          BACKEND
-          FRONTEND
       
-      - name: Deploy frontend
-        run: |
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "EOF"
-          sudo apt update && sudo apt upgrade -y
+      # - name: Deploy frontend
+      #   run: |
+      #     ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "EOF"
+      #     sudo apt update && sudo apt upgrade -y
 
-          git clone https://github.com/QuanMinh086/investment-tracking-system.git
+      #     git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
-          if [ ! -f /home/ubuntu/.react_setup_done ]; then
-            bash /home/ubuntu/investment-tracking-system/.github/workflows/react_setup.sh
-            touch /home/ubuntu/.react_setup_done
-          fi
+      #     if [ ! -f /home/ubuntu/.react_setup_done ]; then
+      #       bash /home/ubuntu/investment-tracking-system/.github/workflows/react_setup.sh
+      #       touch /home/ubuntu/.react_setup_done
+      #     fi
 
-          cd investment-tracking-system
-          sudo mv frontend/ /home/ubuntu
-          cd /home/ubuntu/frontend/
+      #     cd investment-tracking-system
+      #     sudo mv frontend/ /home/ubuntu
+      #     cd /home/ubuntu/frontend/
 
-          if [ ! -f /home/ubuntu/.env_setup_done ]; then
-            cat <<EOT > /home/ubuntu/frontend/.env
-            REACT_APP_API_URL=/api
-            EOT
-            touch /home/ubuntu/.env_setup_done
-          fi
+      #     if [ ! -f /home/ubuntu/.env_setup_done ]; then
+      #       cat <<EOT > /home/ubuntu/frontend/.env
+      #       REACT_APP_API_URL=/api
+      #       EOT
+      #       touch /home/ubuntu/.env_setup_done
+      #     fi
           
-          npm install
-          npm run build
-          sudo mv build /var/www/app
+      #     npm install
+      #     npm run build
+      #     sudo mv build /var/www/app
 
-          if [ ! -f /home/ubuntu/.nginx_setup_done ]; then
-            bash /home/ubuntu/investment-tracking-system/.github/workflows/nginx.sh
-            touch /home/ubuntu/.nginx_setup_done
-          fi
+      #     if [ ! -f /home/ubuntu/.nginx_setup_done ]; then
+      #       bash /home/ubuntu/investment-tracking-system/.github/workflows/nginx.sh
+      #       touch /home/ubuntu/.nginx_setup_done
+      #     fi
 
-          sudo rm -rf investment-tracking-system
+      #     sudo rm -rf investment-tracking-system
 
-          sudo nginx -t
-          sudo systemctl restart nginx
+      #     sudo nginx -t
+      #     sudo systemctl restart nginx
 
-          EOF
+      #     EOF
