@@ -1,7 +1,7 @@
 sudo vim /etc/nginx/sites-available/app
 server {
     listen 80;
-    server_name 44.200.155.152;
+    server_name 100.27.47.233;
 
     root /var/www/react-app;
     index index.html index.htm;
