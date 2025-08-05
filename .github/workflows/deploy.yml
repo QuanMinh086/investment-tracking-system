@@ -14,7 +14,10 @@ jobs:
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
 
-          scp -o StrictHostKeyChecking=no -i vm.pem vm.pem ubuntu@${{ secrets.EC2_FRONTEND }}:~/vm.pem
+          scp -o StrictHostKeyChecking=no \
+          -i vm.pem \
+          vm.pem \
+          "ubuntu@${{ secrets.EC2_FRONTEND }}:/home/ubuntu/vm.pem"
 
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "FRONTEND"
           chmod 400 ~/vm.pem
