@@ -16,11 +16,6 @@ jobs:
 
           # ─── SSH to FRONTEND ───
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << 'FRONTEND'
-          export DB_USER="${{ secrets.DB_USER }}"
-          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          export DB_NAME="${{ secrets.DB_NAME }}"
-          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-
           if [ ! -f ~/vm.pem ]; then
             cat ~/vm.pem > ~/vm.pem
             chmod 400 ~/vm.pem
@@ -40,8 +35,14 @@ jobs:
             touch ~/.database_setup_done
           fi
 
-          mv /home/ubuntu/investment-tracking-system/backend /home/ubuntu/
-          cd home/ubuntu/backend
+          if [ -d /home/ubuntu/backend ]; then
+            echo "Removing old backend directory…"
+            rm -rf /home/ubuntu/backend
+          fi
+
+          # move the fresh backend into place
+          mv /home/ubuntu/investment-tracking-system/backend /home/ubuntu/backend
+          cd /home/ubuntu/backend
 
           npm install
 
