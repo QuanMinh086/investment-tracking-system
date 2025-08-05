@@ -97,7 +97,7 @@ jobs:
           sudo cp -r build/* /var/www/react-app/
 
           if [ ! -f /etc/nginx/sites-enabled/app.conf ]; then
-            sudo tee /etc/nginx/sites-available/app.conf > /dev/null <<NGINX
+            sudo tee /etc/nginx/sites-available/app.conf > /dev/null <<'NGINX'
             server {
               listen 80;
               server_name _;
@@ -112,7 +112,7 @@ jobs:
                   proxy_pass http://${EC2_BACKEND}:8000;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade \$http_upgrade;
-                  proxy_set_header Connection upgrade;
+                  proxy_set_header Connection "upgrade";
                   proxy_set_header Host \$host;
                   proxy_cache_bypass \$http_upgrade;
               }
