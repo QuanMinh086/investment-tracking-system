@@ -13,46 +13,51 @@ jobs:
         run: |
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "EOF"
+
+          # ─── SSH to FRONTEND ───
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << 'FRONTEND'
           export DB_USER="${{ secrets.DB_USER }}"
           export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
           export DB_NAME="${{ secrets.DB_NAME }}"
           export JWT_SECRET="${{ secrets.JWT_SECRET }}"
 
           if [ ! -f ~/vm.pem ]; then
-            echo "${{ secrets.PRIVATE_KEY }}" > ~/vm.pem
+            cat ~/vm.pem > ~/vm.pem
             chmod 400 ~/vm.pem
           fi
 
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "EOF"
-            sudo apt update && sudo apt upgrade -y
+          ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << 'BACKEND'
+          set -e
 
-            git clone https://github.com/QuanMinh086/investment-tracking-system.git
+          sudo apt update && sudo apt upgrade -y
 
-            if [ ! -f /home/ubuntu/.database_setup_done ]; then
-              bash /home/ubuntu/investment-tracking-system/.github/workflows/database_setup.sh
-              touch /home/ubuntu/.database_setup_done
-            fi
+          rm -rf ~/investment-tracking-system
 
-            mv investment-tracking-system/backend/ /home/ubuntu/
-            cd /home/ubuntu/backend/
+          git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
-            npm install
+          if [ ! -f ~/.database_setup_done ]; then
+            bash ~/investment-tracking-system/.github/workflows/database_setup.sh
+            touch ~/.database_setup_done
+          fi
 
-            if [ ! -f /home/ubuntu/.backend_setup_done ]; then
-              bash /home/ubuntu/investment-tracking-system/.github/workflows/backend_setup.sh
-              touch /home/ubuntu/.backend_setup_done
-            fi
+          mv ~/investment-tracking-system/backend ~/backend
+          cd ~/backend
 
-            sudo rm -rf investment-tracking-system
+          npm install
 
-            pm2 start app.js --name app
-          EOF
-          EOF
+          if [ ! -f ~/.backend_setup_done ]; then
+            bash ~/investment-tracking-system/.github/workflows/backend_setup.sh
+            touch ~/.backend_setup_done
+          fi
 
+          # remove the repo after moving
+          rm -rf ~/investment-tracking-system
+          pm2 start app.js --name app
+          BACKEND
+          FRONTEND
       
       - name: Deploy frontend
-        run : |
+        run: |
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "EOF"
           sudo apt update && sudo apt upgrade -y
 
