@@ -14,12 +14,10 @@ jobs:
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
 
-          # ─── SSH to FRONTEND ───
+          scp -o StrictHostKeyChecking=no -i vm.pem vm.pem ubuntu@${{ secrets.EC2_FRONTEND }}:~
+
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "FRONTEND"
-          if [ ! -f ~/vm.pem ]; then
-            cat ~/vm.pem > ~/vm.pem
-            chmod 400 ~/vm.pem
-          fi
+          chmod 400 ~/vm.pem
 
           ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
           set -e
