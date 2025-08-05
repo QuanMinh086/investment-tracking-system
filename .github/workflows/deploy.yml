@@ -99,26 +99,26 @@ jobs:
           # 5) Configure nginx (only once)
           if [ ! -f /etc/nginx/sites-enabled/app.conf ]; then
             sudo tee /etc/nginx/sites-available/app.conf > /dev/null <<NGINX
-            server {
-                listen 80;
-                server_name _;
-                root /var/www/react-app;
-                index index.html;
+          server {
+              listen 80;
+              server_name _;
+              root /var/www/react-app;
+              index index.html;
 
-                location / {
-                    try_files \$uri /index.html;
-                }
+              location / {
+                  try_files \$uri /index.html;
+              }
 
-                location /api/ {
-                    proxy_pass http://${EC2_BACKEND}:8000;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade \$http_upgrade;
-                    proxy_set_header Connection 'upgrade';
-                    proxy_set_header Host \$host;
-                    proxy_cache_bypass \$http_upgrade;
-                }
-            }
-            NGINX
+              location /api/ {
+                  proxy_pass http://${EC2_BACKEND}:8000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade \$http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host \$host;
+                  proxy_cache_bypass \$http_upgrade;
+              }
+          }
+          NGINX
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo ln -s /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
           fi
