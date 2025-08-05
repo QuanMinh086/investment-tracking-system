@@ -54,6 +54,8 @@ jobs:
           sudo rm -rf ~/investment-tracking-system
 
           cd ~/backend
+          npm install
+
           if pm2 describe app >/dev/null 2>&1; then
             echo "→ pm2 process 'app' found; restarting"
             pm2 restart app
