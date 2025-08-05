@@ -25,15 +25,17 @@ jobs:
           chmod 400 ~/vm.pem
 
           ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
+          export DB_USER='${{ secrets.DB_USER }}'
+          export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
+          export DB_NAME='${{ secrets.DB_NAME }}'
+          export JWT_SECRET='${{ secrets.JWT_SECRET }}'
+
           sudo apt update && sudo apt upgrade -y
 
           sudo rm -rf ~/backend
           git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
           if [ ! -f ~/.database_setup_done ]; then
-            export DB_USER='${{ secrets.DB_USER }}'
-            export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
-            export DB_NAME='${{ secrets.DB_NAME }}'
             bash ~/investment-tracking-system/.github/workflows/database_setup.sh
             touch ~/.database_setup_done
           fi
