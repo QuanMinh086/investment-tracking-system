@@ -14,6 +14,10 @@ jobs:
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} << "EOF"
+          export DB_USER="${{ secrets.DB_USER }}"
+          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          export DB_NAME="${{ secrets.DB_NAME }}"
+          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
 
           if [ ! -f ~/vm.pem ]; then
             echo "${{ secrets.PRIVATE_KEY }}" > ~/vm.pem
@@ -36,10 +40,6 @@ jobs:
             npm install
 
             if [ ! -f /home/ubuntu/.backend_setup_done ]; then
-              export DB_USER="${{ secrets.DB_USER }}"
-              export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-              export DB_NAME="${{ secrets.DB_NAME }}"
-              export JWT_SECRET="${{ secrets.JWT_SECRET }}"
               bash /home/ubuntu/investment-tracking-system/.github/workflows/backend_setup.sh
               touch /home/ubuntu/.backend_setup_done
             fi
