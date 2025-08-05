@@ -93,7 +93,7 @@ jobs:
             touch /home/ubuntu/.nginx_setup_done
           fi
 
-          sudo mv investment-tracking-system/frontend /home/ubuntu
+          sudo mv frontend /home/ubuntu
           sudo rm -rf investment-tracking-system
 
           npm install
