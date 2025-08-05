@@ -1,0 +1,89 @@
+name: Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy backend
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.PRIVATE_KEY }} ubuntu@${{ secrets.EC2_FRONTEND }} << 'EOF'
+
+          if [ ! -f ~/vm.pem ]; then
+            echo "${{ secrets.PRIVATE_KEY }}" > ~/vm.pem
+            chmod 400 ~/vm.pem
+          fi
+
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.PRIVATE_KEY }} ubuntu@${{ secrets.EC2_BACKEND }} << 'EOF'
+            sudo apt update && sudo apt upgrade -y
+
+            git clone https://github.com/QuanMinh086/investment-tracking-system.git
+
+            if [ ! -f /home/ubuntu/.database_setup_done ]; then
+              bash /home/ubuntu/investment-tracking-system/.github/workflows/database_setup.sh
+              touch /home/ubuntu/.database_setup_done
+            fi
+
+            mv investment-tracking-system/backend/ /home/ubuntu/
+            cd /home/ubuntu/backend/
+
+            npm install
+
+            if [ ! -f /home/ubuntu/.backend_setup_done ]; then
+              export DB_USER="${{ secrets.DB_USER }}"
+              export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+              export DB_NAME="${{ secrets.DB_NAME }}"
+              export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+              bash /home/ubuntu/investment-tracking-system/.github/workflows/backend_setup.sh
+              touch /home/ubuntu/.backend_setup_done
+            fi
+
+            sudo rm -rf investment-tracking-system
+
+            pm2 start app.js --name app
+          EOF
+          EOF
+
+      
+      - name: Deploy frontend
+        run : |
+          ssh ${{ secrets.PRIVATE_KEY }}@${{ secrets.EC2_FRONTEND }} << 'EOF'
+          sudo apt update && sudo apt upgrade -y
+
+          git clone https://github.com/QuanMinh086/investment-tracking-system.git
+
+          if [ ! -f /home/ubuntu/.react_setup_done ]; then
+            bash /home/ubuntu/investment-tracking-system/.github/workflows/react_setup.sh
+            touch /home/ubuntu/.react_setup_done
+          fi
+
+          cd investment-tracking-system
+          sudo mv frontend/ /home/ubuntu
+          cd /home/ubuntu/frontend/
+
+          if [ ! -f /home/ubuntu/.env_setup_done ]; then
+            cat <<EOT > /home/ubuntu/frontend/.env
+            REACT_APP_API_URL=/api
+            EOT
+            touch /home/ubuntu/.env_setup_done
+          fi
+          
+          npm install
+          npm run build
+          sudo mv build /var/www/app
+
+          if [ ! -f /home/ubuntu/.nginx_setup_done ]; then
+            bash /home/ubuntu/investment-tracking-system/.github/workflows/nginx.sh
+            touch /home/ubuntu/.nginx_setup_done
+          fi
+
+          sudo rm -rf investment-tracking-system
+
+          sudo nginx -t
+          sudo systemctl restart nginx
+
+          EOF
