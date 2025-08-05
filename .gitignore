@@ -41,8 +41,8 @@ Thumbs.db
 terraform/.terraform/
 terraform/.terraform.lock.hcl
 terraform/crash.log
-terraform/terraform.tfstate
-terraform/terraform.tfstate.backup
+terraform/terraform.tfstate 
+terraform/terraform.tfstate.backup 
 *.tfvars
 *.tfvars.json
 
