@@ -40,8 +40,8 @@ jobs:
             touch ~/.database_setup_done
           fi
 
-          mv ~/investment-tracking-system/backend ~/backend
-          cd ~/backend
+          mv ~/investment-tracking-system/backend home/ubuntu/
+          cd home/ubuntu/backend
 
           npm install
 
