@@ -14,7 +14,6 @@ jobs:
           echo "${{ secrets.PRIVATE_KEY }}" > vm.pem
           chmod 400 vm.pem
 
-          # only upload vm.pem if it doesn't already exist on frontend
           if ! ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${{ secrets.EC2_FRONTEND }} \
               "[ -f /home/ubuntu/vm.pem ]"; then
             scp -o StrictHostKeyChecking=no -i vm.pem \
@@ -26,43 +25,42 @@ jobs:
           chmod 400 ~/vm.pem
 
           ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
-
-          DB_USER="${{ secrets.DB_USER }}"
-          DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          DB_NAME="${{ secrets.DB_NAME }}"
-
           sudo apt update && sudo apt upgrade -y
 
+          sudo rm -rf ~/backend
           git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
           if [ ! -f ~/.database_setup_done ]; then
+            export DB_USER='${{ secrets.DB_USER }}'
+            export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
+            export DB_NAME='${{ secrets.DB_NAME }}'
             bash ~/investment-tracking-system/.github/workflows/database_setup.sh
             touch ~/.database_setup_done
           fi
 
-          if [ -d /home/ubuntu/backend ]; then
-            echo "Removing old backend directory…"
-            rm -rf /home/ubuntu/backend
-            rm -f /home/ubuntu/.backend_setup_done
+          cd ~/investment-tracking-system/backend
+          cat <<EOT > /home/ubuntu/frontend/.env
+          PORT=8000
+          DB_HOST=localhost
+          DB_USER=${DB_USER}
+          DB_PASSWORD=${DB_PASSWORD}
+          DB_NAME=${DB_NAME}
+          DB_PORT=5432
+          JWT_SECRET=${JWT_SECRET}
+          EOT
+
+          sudo mv ~/investment-tracking-system/backend ~/
+          sudo rm -rf ~/investment-tracking-system
+
+          cd ~/backend
+          if pm2 describe app >/dev/null 2>&1; then
+            echo "→ pm2 process 'app' found; restarting"
+            pm2 restart app
+          else
+            echo "→ no existing pm2 process named 'app'; starting fresh"
+            pm2 start app.js --name app
           fi
 
-          # move the fresh backend into place
-          mv /home/ubuntu/investment-tracking-system/backend /home/ubuntu/backend
-          cd /home/ubuntu/backend
-
-          npm install
-
-          if [ ! -f ~/.backend_setup_done ]; then
-            bash ~/investment-tracking-system/.github/workflows/backend_setup.sh
-            touch ~/.backend_setup_done
-          fi
-
-          rm -rf ~/investment-tracking-system
-
-          # If “app” is already registered, restart it; otherwise start it (with force)
-          pm2 describe app >/dev/null 2>&1 \
-            && pm2 restart app \
-            || pm2 start app.js --name app -f
           BACKEND
           FRONTEND
       
