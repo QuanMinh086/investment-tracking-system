@@ -97,6 +97,7 @@ jobs:
           sudo cp -r build/* /var/www/react-app/
           
           if [ ! -f /etc/nginx/sites-enabled/app.conf ]; then
+            sudo su -
             cat <<'EOT' > /etc/nginx/sites-available/app.conf
             server {
               listen 80;
@@ -119,6 +120,7 @@ jobs:
               }
             }
           EOT
+          exit
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo ln -s /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
           fi
