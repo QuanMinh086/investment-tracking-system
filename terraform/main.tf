@@ -1,11 +1,11 @@
 # VPC
 resource "aws_vpc" "vpc" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
-    Name = "chat"
+    Name = var.vpc_name
   }
 }
 
@@ -14,38 +14,38 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
 
   tags = {
-    Name = "main-igw"
+    Name = var.igw_name
   }
 }
 
 # Public Subnet
 resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.vpc.id
-  cidr_block        = "10.0.0.0/24"
-  availability_zone = "us-east-1a"
+  cidr_block        = var.public_subnet_cidr
+  availability_zone = var.az
 
   tags = {
-    Name = "public-subnet"
+    Name = var.public_subnet_name
   }
 }
 
 # Private Subnet
 resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.vpc.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
+  cidr_block        = var.private_subnet_cidr
+  availability_zone = var.az
 
   tags = {
-    Name = "private-subnet"
+    Name = var.private_subnet_name
   }
 }
 
 # Elastic IP for NAT
 resource "aws_eip" "nat_eip" {
-  domain = "vpc"
+  domain = var.eip_domain
 
   tags = {
-    Name = "nat-eip"
+    Name = var.eip_name
   }
 }
 
@@ -55,14 +55,14 @@ resource "aws_nat_gateway" "nat" {
   subnet_id     = aws_subnet.public.id
 
   tags = {
-    Name = "nat-gateway"
+    Name = var.nat_gateway_name
   }
 }
 
 # Frontend Security Group
 resource "aws_security_group" "frontend" {
-  name        = "frontend-security-group"
-  description = "Allow HTTP and SSH for frontend"
+  name        = var.frontend_security_group
+  description = var.frontend_security_group_description
   vpc_id      = aws_vpc.vpc.id
 
   ingress {
@@ -87,14 +87,14 @@ resource "aws_security_group" "frontend" {
   }
 
   tags = {
-    Name = "frontend-sg"
+    Name = var.frontend_security_group_name
   }
 }
 
 # Backend Security Group
 resource "aws_security_group" "backend" {
-  name        = "backend-security-group"
-  description = "Allow app and SSH from frontend"
+  name        = var.backend_security_group
+  description = var.backend_security_group_description
   vpc_id      = aws_vpc.vpc.id
 
   ingress {
@@ -119,35 +119,35 @@ resource "aws_security_group" "backend" {
   }
 
   tags = {
-    Name = "backend-sg"
+    Name = var.backend_security_group_name
   }
 }
 
 # Frontend EC2 Instance
 resource "aws_instance" "frontend" {
-  ami                         = "ami-020cba7c55df1f615"
-  instance_type               = "t2.micro"
+  ami                         = var.ami
+  instance_type               = var.instance_type
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.frontend.id]
-  key_name                    = "vm"
+  key_name                    = var.key_name
   associate_public_ip_address = true
 
   tags = {
-    Name = "frontend"
+    Name = var.frontend_name
   }
 }
 
 # Backend EC2 Instance
 resource "aws_instance" "backend" {
-  ami                         = "ami-020cba7c55df1f615"
-  instance_type               = "t2.micro"
+  ami                         = var.ami
+  instance_type               = var.instance_type
   subnet_id                   = aws_subnet.private.id
   vpc_security_group_ids      = [aws_security_group.backend.id]
-  key_name                    = "vm"
+  key_name                    = var.key_name
   associate_public_ip_address = false
 
   tags = {
-    Name = "backend"
+    Name = var.backend_name
   }
 }
 
@@ -156,12 +156,12 @@ resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.vpc.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block = var.route_table_cidr
     gateway_id = aws_internet_gateway.igw.id
   }
 
   tags = {
-    Name = "public-route-table"
+    Name = var.public_rt_name
   }
 }
 
@@ -175,12 +175,12 @@ resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.vpc.id
 
   route {
-    cidr_block     = "0.0.0.0/0"
+    cidr_block     = var.route_table_cidr
     nat_gateway_id = aws_nat_gateway.nat.id
   }
 
   tags = {
-    Name = "private-route-table"
+    Name = var.private_rt_name
   }
 }
 

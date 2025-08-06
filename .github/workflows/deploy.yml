@@ -27,6 +27,11 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i ~/vm.pem ubuntu@${{ secrets.EC2_BACKEND }} << "BACKEND"
 
           sudo apt update && sudo apt upgrade -y
+          curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+          sudo apt install -y nodejs
+          sudo npm install -g pm2
+          node -v
+          npm -v
 
           sudo rm -rf ~/backend
           git clone https://github.com/QuanMinh086/investment-tracking-system.git
@@ -104,7 +109,7 @@ jobs:
           cat > app.conf <<EOT
             server {
               listen 80;
-              server_name 44.211.120.18;
+              server_name 44.204.118.15;
 
               root /var/www/react-app;
               index index.html index.htm;
