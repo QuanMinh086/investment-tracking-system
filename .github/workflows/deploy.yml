@@ -72,33 +72,31 @@ jobs:
           EC2_FRONTEND: ${{ secrets.EC2_FRONTEND }}
           EC2_BACKEND:  ${{ secrets.EC2_BACKEND }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${EC2_FRONTEND} <<EOF
-          sudo apt update && sudo apt upgrade -y
-          curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-          sudo apt install -y nodejs
-          sudo apt install -y nginx
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${EC2_FRONTEND} << 'EOF'
+            sudo apt update && sudo apt upgrade -y
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt install -y nodejs nginx
 
-          sudo rm -rf ~/frontend
-          git clone https://github.com/QuanMinh086/investment-tracking-system.git
+            sudo rm -rf ~/frontend
+            git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
-          sudo mv ~/investment-tracking-system/frontend /home/ubuntu
-          sudo rm -rf ~/investment-tracking-system
+            sudo mv ~/investment-tracking-system/frontend /home/ubuntu
+            sudo rm -rf ~/investment-tracking-system
 
-          cd /home/ubuntu/frontend
-          cat <<EOT > .env
-          REACT_APP_API_URL=/api
-          EOT
+            cd /home/ubuntu/frontend
+            cat <<EOT > .env
+            REACT_APP_API_URL=/api
+            EOT
 
-          npm install
-          npm run build
+            npm install
+            npm run build
 
-          sudo rm -rf /var/www/react-app
-          sudo mkdir -p /var/www/react-app
-          sudo cp -r build/* /var/www/react-app/
-          
-          if [ ! -f /etc/nginx/sites-enabled/app.conf ]; then
-            sudo su -
-            cat <<'EOT' > /etc/nginx/sites-available/app.conf
+            sudo rm -rf /var/www/react-app
+            sudo mkdir -p /var/www/react-app
+            sudo cp -r build/* /var/www/react-app/
+          EOF
+
+          cat > app.conf <<'EOT'
             server {
               listen 80;
               server_name 98.80.205.221;
@@ -120,11 +118,12 @@ jobs:
               }
             }
           EOT
-          exit
-            sudo rm -f /etc/nginx/sites-enabled/default
-            sudo ln -s /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
-          fi
 
-          sudo nginx -t
-          sudo systemctl reload nginx
-          EOF
+          scp -o StrictHostKeyChecking=no -i vm.pem app.conf ubuntu@${EC2_FRONTEND}:/home/ubuntu/app.conf
+          ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${EC2_FRONTEND} << 'EOF2'
+            sudo mv /home/ubuntu/app.conf /etc/nginx/sites-available/app.conf
+            sudo rm -f /etc/nginx/sites-enabled/default
+            sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
+            sudo nginx -t
+            sudo systemctl reload nginx
+          EOF2
