@@ -97,14 +97,14 @@ jobs:
           sudo cp -r build/* /var/www/react-app/
           
           if [ ! -f /etc/nginx/sites-enabled/app.conf ]; then
-            sudo bash -c "cat > /etc/nginx/sites-available/app.conf <<'EOT'
+            cat <<'EOT' > /etc/nginx/sites-available/app.conf
             server {
               listen 80;
               server_name 98.80.205.221;
 
               root /var/www/react-app;
               index index.html index.htm;
-              
+
               location / {
                 try_files \$uri \$uri/ /index.html;
               }
@@ -113,12 +113,12 @@ jobs:
                 proxy_pass http://${EC2_BACKEND}:8000/;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade \$http_upgrade;
-                proxy_set_header Connection \"upgrade\";
+                proxy_set_header Connection "upgrade";
                 proxy_set_header Host \$host;
                 proxy_cache_bypass \$http_upgrade;
               }
             }
-          EOT"
+          EOT
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo ln -s /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
           fi
