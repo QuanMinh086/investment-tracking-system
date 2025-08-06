@@ -72,11 +72,16 @@ jobs:
           EC2_FRONTEND: ${{ secrets.EC2_FRONTEND }}
           EC2_BACKEND:  ${{ secrets.EC2_BACKEND }}
         run: |
+          # Build and deploy the frontend on the frontend host
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${EC2_FRONTEND} << 'EOF'
+            set -e
+
             sudo apt update && sudo apt upgrade -y
+            # Install Node.js and nginx
             curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
             sudo apt install -y nodejs nginx
 
+            # Clone the repo and move the frontend directory
             sudo rm -rf ~/frontend
             git clone https://github.com/QuanMinh086/investment-tracking-system.git
 
@@ -84,6 +89,7 @@ jobs:
             sudo rm -rf ~/investment-tracking-system
 
             cd /home/ubuntu/frontend
+            # Create the .env file for React
             cat <<EOT > .env
             REACT_APP_API_URL=/api
             EOT
@@ -91,12 +97,14 @@ jobs:
             npm install
             npm run build
 
+            # Copy build files to nginx document root
             sudo rm -rf /var/www/react-app
             sudo mkdir -p /var/www/react-app
             sudo cp -r build/* /var/www/react-app/
           EOF
 
-          cat > app.conf <<'EOT'
+          # Create nginx config locally with variable expansion for EC2_BACKEND
+          cat > app.conf <<EOT
             server {
               listen 80;
               server_name 98.80.205.221;
@@ -109,6 +117,8 @@ jobs:
               }
 
               location /api/ {
+                # Expand EC2_BACKEND here so nginx sees a literal host/IP,
+                # while keeping nginx variables escaped with backslashes
                 proxy_pass http://${EC2_BACKEND}:8000/;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade \$http_upgrade;
@@ -119,8 +129,11 @@ jobs:
             }
           EOT
 
+          # Upload nginx config and reload nginx on the frontend host
           scp -o StrictHostKeyChecking=no -i vm.pem app.conf ubuntu@${EC2_FRONTEND}:/home/ubuntu/app.conf
           ssh -o StrictHostKeyChecking=no -i vm.pem ubuntu@${EC2_FRONTEND} << 'EOF2'
+            set -e
+
             sudo mv /home/ubuntu/app.conf /etc/nginx/sites-available/app.conf
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo ln -sf /etc/nginx/sites-available/app.conf /etc/nginx/sites-enabled/app.conf
