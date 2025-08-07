@@ -18,15 +18,25 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-# Public & Private Subnet
-resource "aws_subnet" "subnets" {
-  for_each          = var.subnets
+# Public Subnet
+resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.vpc.id
-  cidr_block        = each.value.cidr_block
-  availability_zone = each.value.az
+  cidr_block        = var.public_subnet_cidr
+  availability_zone = var.az
 
   tags = {
-    Name = each.value.name
+    Name = var.public_subnet_name
+  }
+}
+
+# Private Subnet
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = var.private_subnet_cidr
+  availability_zone = var.az
+
+  tags = {
+    Name = var.private_subnet_name
   }
 }
 
@@ -42,31 +52,31 @@ resource "aws_eip" "nat_eip" {
 # NAT Gateway
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.subnets["public"].id
+  subnet_id     = aws_subnet.public.id
 
   tags = {
     Name = var.nat_gateway_name
   }
 }
 
-# Frontend & Backend Security Group
-resource "aws_security_group" "sg" {
-  for_each    = var.security_groups
-  name        = "${each.key}-security-group"
-  description = each.value.description
+# Frontend Security Group
+resource "aws_security_group" "frontend" {
+  name        = var.frontend_security_group
+  description = var.frontend_security_group_description
   vpc_id      = aws_vpc.vpc.id
 
-  dynamic "ingress" {
-    for_each = [
-      for rule in each.value.ingress_rules : rule
-      if length(lookup(rule, "security_groups", [])) == 0
-    ]
-    content {
-      from_port   = ingress.value.from_port
-      to_port     = ingress.value.to_port
-      protocol    = ingress.value.protocol
-      cidr_blocks = lookup(ingress.value, "cidr_blocks", [])
-    }
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -77,24 +87,67 @@ resource "aws_security_group" "sg" {
   }
 
   tags = {
-    Name = "${each.key}-security-group"
+    Name = var.frontend_security_group_name
   }
 }
 
-# Frontend & Backend EC2 Instances
-resource "aws_instance" "instance" {
-  for_each                    = var.instances
-  ami                         = var.ami
-  instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.subnets[each.value.subnet_type].id
-  vpc_security_group_ids      = [aws_security_group.sg[each.value.sg_name].id]
-  key_name                    = var.key_name
-  associate_public_ip_address = each.value.associate_ip
+# Backend Security Group
+resource "aws_security_group" "backend" {
+  name        = var.backend_security_group
+  description = var.backend_security_group_description
+  vpc_id      = aws_vpc.vpc.id
 
-  depends_on = [aws_security_group.sg]
+  ingress {
+    from_port       = 8000
+    to_port         = 8000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.frontend.id]
+  }
+
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.frontend.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   tags = {
-    Name = each.value.name
+    Name = var.backend_security_group_name
+  }
+}
+
+# Frontend EC2 Instance
+resource "aws_instance" "frontend" {
+  ami                         = var.ami
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.frontend.id]
+  key_name                    = var.key_name
+  associate_public_ip_address = true
+
+  tags = {
+    Name = var.frontend_name
+  }
+}
+
+# Backend EC2 Instance
+resource "aws_instance" "backend" {
+  ami                         = var.ami
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.private.id
+  vpc_security_group_ids      = [aws_security_group.backend.id]
+  key_name                    = var.key_name
+  associate_public_ip_address = false
+
+  tags = {
+    Name = var.backend_name
   }
 }
 
@@ -113,7 +166,7 @@ resource "aws_route_table" "public_rt" {
 }
 
 resource "aws_route_table_association" "public_assoc" {
-  subnet_id      = aws_subnet.subnets["public"].id
+  subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public_rt.id
 }
 
@@ -132,6 +185,6 @@ resource "aws_route_table" "private_rt" {
 }
 
 resource "aws_route_table_association" "private_assoc" {
-  subnet_id      = aws_subnet.subnets["private"].id
+  subnet_id      = aws_subnet.private.id
   route_table_id = aws_route_table.private_rt.id
 }

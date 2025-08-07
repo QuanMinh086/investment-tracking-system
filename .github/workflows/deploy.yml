@@ -109,7 +109,7 @@ jobs:
           cat > app.conf <<EOT
             server {
               listen 80;
-              server_name 98.86.162.162;
+              server_name 3.237.190.4;
 
               root /var/www/react-app;
               index index.html index.htm;
